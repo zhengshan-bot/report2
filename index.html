@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>专属消课系统 · 账号隔离版</title>
+<style>
+  :root{
+    --bg:#f1f5f9; --card:#fff; --line:#e2e8f0;
+    --text:#0f172a; --muted:#64748b; --primary:#4f46e5;
+    --green:#10b981; --red:#ef4444; --amber:#f59e0b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg); color:var(--text); line-height:1.5;
+    padding:24px; min-height:100vh; -webkit-tap-highlight-color: transparent;
+  }
+  .app{max-width:1200px;margin:0 auto;display:none}
+
+  /* ---------- 登录界面 ---------- */
+  #loginScreen{
+    position:fixed; inset:0; background:var(--bg); z-index:1000;
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .login-box{
+    background:#fff; padding:40px 32px; border-radius:24px;
+    box-shadow:0 10px 40px rgba(15,23,42,.08); width:100%; max-width:400px; text-align:center;
+  }
+  .login-box .icon{font-size:40px; margin-bottom:12px;}
+  .login-box h1{font-size:24px; margin-bottom:8px; color:var(--text)}
+  .login-box p{font-size:14px; color:var(--muted); margin-bottom:28px}
+  .input-group{margin-bottom:20px; text-align:left;}
+  .input-group label{display:block; font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px;}
+  .input-group input{
+    width:100%; padding:14px 16px; border:1px solid var(--line); border-radius:12px;
+    font-size:16px; font-family:inherit; outline:none; transition:.15s;
+  }
+  .input-group input:focus{border-color:var(--primary); box-shadow:0 0 0 4px rgba(79,70,229,.13)}
+  .login-btn{
+    width:100%; padding:14px; border:none; border-radius:12px;
+    background:var(--primary); color:#fff; font-size:16px; font-weight:600;
+    cursor:pointer; transition:.15s;
+  }
+  .login-btn:active{background:#4338ca; transform:scale(0.98)}
+  .login-hint{margin-top:20px; font-size:12.5px; color:#94a3b8; background:#f8fafc; padding:10px; border-radius:8px;}
+
+  /* ---------- 顶部状态 ---------- */
+  header{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+  h1{font-size:26px;letter-spacing:-.5px}
+  .sub{color:var(--muted);font-size:14px;margin-top:2px}
+  .user-bar{
+    display:flex; align-items:center; gap:12px; background:#fff; padding:8px 16px;
+    border-radius:99px; box-shadow:0 1px 3px rgba(15,23,42,.07);
+  }
+  .user-bar .u-name{font-weight:700; color:var(--primary); font-size:15px}
+  .btn-logout{border:none; background:#f1f5f9; color:#64748b; padding:6px 12px; border-radius:99px; font-size:12.5px; font-weight:600; cursor:pointer; transition:.15s}
+  .btn-logout:hover{background:#fee2e2; color:#dc2626}
+
+  .actions{display:flex;gap:10px;flex-wrap:wrap}
+  .btn{
+    border:none;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:600;
+    cursor:pointer;transition:.15s;font-family:inherit;white-space:nowrap;
+  }
+  .btn.primary{background:var(--primary);color:#fff;box-shadow:0 4px 12px rgba(79,70,229,.3)}
+  .btn.ghost{background:#fff;color:var(--text);border:1px solid var(--line)}
+  .btn.green{background:var(--green);color:#fff}
+  .btn.small{padding:6px 12px;font-size:13px;border-radius:8px}
+
+  /* ---------- 内容区 ---------- */
+  .summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:26px}
+  .sum-card{background:#fff;border-radius:14px;padding:16px 18px;box-shadow:0 1px 3px rgba(15,23,42,.07);}
+  .sum-label{font-size:12.5px;color:var(--muted);font-weight:600}
+  .sum-val{font-size:26px;font-weight:800;margin-top:2px;letter-spacing:-.5px}
+  .sum-val small{font-size:13px;font-weight:600;color:var(--muted);margin-left:2px}
+
+  h2{font-size:17px;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+  .students{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-bottom:30px}
+  .student{
+    background:#fff;border-radius:16px;padding:18px;border-left:5px solid var(--c);
+    box-shadow:0 1px 3px rgba(15,23,42,.07);transition:.15s;
+  }
+  .stu-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:12px}
+  .stu-name{font-weight:800;font-size:17px;}
+  .stu-badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:#f1f5f9;color:#64748b;}
+  .stu-badge.low{background:#fef2f2;color:#dc2626}
+  .stu-badge.ok{background:#ecfdf5;color:#059669}
+  .stu-balance{display:flex;align-items:baseline;gap:6px;margin-bottom:8px}
+  .balance-num{font-size:30px;font-weight:800;color:var(--c);letter-spacing:-1px;line-height:1}
+  .balance-unit{font-size:13px;color:var(--muted);font-weight:600}
+  .stu-meta{font-size:12.5px;color:var(--muted);display:flex;gap:14px;margin-bottom:14px}
+  .stu-actions{display:flex;gap:8px;}
+
+  .records{background:#fff;border-radius:16px;padding:8px;box-shadow:0 1px 3px rgba(15,23,42,.07);}
+  .record{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;}
+  .record + .record{border-top:1px solid #f1f5f9}
+  .rec-dot{width:8px;height:8px;border-radius:50%;background:var(--red);flex:0 0 auto}
+  .rec-main{flex:1;min-width:0}
+  .rec-title{font-weight:700;font-size:14px;}
+  .rec-title small{font-weight:600;color:var(--muted);font-size:12px;margin-left:4px}
+  .rec-note{font-size:12.5px;color:var(--muted);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rec-time{font-size:12px;color:#94a3b8;white-space:nowrap}
+  .rec-amount{font-weight:800;font-size:15px;color:var(--red);white-space:nowrap}
+  .rec-undo{border:none;background:#f1f5f9;color:#64748b;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;}
+  .rec-undo:hover{background:#fee2e2;color:#dc2626}
+  .empty{color:#94a3b8;font-size:13px;text-align:center;padding:34px 0;font-weight:500}
+
+  /* 弹窗 */
+  .modal{position:fixed;inset:0;background:rgba(15,23,42,.5);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center;padding:20px;z-index:100;}
+  .modal.show{display:flex}
+  .modal-box{background:#fff;border-radius:18px;padding:24px;width:100%;max-width:400px;animation:pop .2s ease;}
+  @keyframes pop{from{transform:scale(.95);opacity:0}to{transform:scale(1);opacity:1}}
+  .modal-box h3{font-size:18px;margin-bottom:16px}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px}
+  .field input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;outline:none;}
+  .field input:focus{border-color:var(--primary)}
+  .quick-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .quick{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer;}
+  .quick:hover{border-color:var(--primary);color:var(--primary);background:#eef2ff}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+
+  @media (max-width:640px){
+    body{padding:14px}
+    .students{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<!-- 登录界面 -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="icon">🔐</div>
+    <h1>消课系统登录</h1>
+    <p>请输入您的用户名以进入系统</p>
+    <div class="input-group">
+      <label>用户名</label>
+      <input type="text" id="loginUser" placeholder="请输入 zlt 或 fzd" autocomplete="off" />
+    </div>
+    <button class="login-btn" id="loginBtn">进入系统</button>
+    <div class="login-hint">可用账号：zlt 或 fzd</div>
+  </div>
+</div>
+
+<!-- 主界面 -->
+<div class="app" id="appScreen">
+  <header>
+    <div>
+      <h1>📚 消课管理系统</h1>
+      <p class="sub">当前数据已独立隔离，安全无忧</p>
+    </div>
+    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+      <div class="user-bar">
+        <span>当前账号：</span>
+        <span class="u-name" id="currentUserDisplay">-</span>
+        <button class="btn-logout" id="logoutBtn">切换账号</button>
+      </div>
+      <div class="actions">
+        <button class="btn ghost" id="resetBtn">清空数据</button>
+        <button class="btn green" id="addStudentBtn">＋ 添加学生</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="summary" id="summary"></section>
+
+  <section>
+    <h2>👤 学生课时</h2>
+    <div class="students" id="students"></div>
+  </section>
+
+  <section>
+    <h2>📝 消课记录</h2>
+    <div class="records" id="records"></div>
+  </section>
+</div>
+
+<!-- 消课弹窗 -->
+<div class="modal" id="consumeModal">
+  <div class="modal-box">
+    <h3>扣减课时</h3>
+    <p id="consumeSub" style="font-size:13px;color:var(--muted);margin-bottom:14px;"></p>
+    <div class="field">
+      <label>消课数量</label>
+      <input type="number" id="cAmount" step="0.5" min="0.5" value="1" />
+      <div class="quick-row">
+        <button class="quick" data-amt="0.5">0.5</button>
+        <button class="quick" data-amt="1">1</button>
+        <button class="quick" data-amt="1.5">1.5</button>
+        <button class="quick" data-amt="2">2</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>备注（可选）</label>
+      <input type="text" id="cNote" placeholder="例如：数学一对一" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="consumeCancel">取消</button>
+      <button class="btn primary" id="consumeSave">确认消课</button>
+    </div>
+  </div>
+</div>
+
+<!-- 添加学生弹窗 -->
+<div class="modal" id="addModal">
+  <div class="modal-box">
+    <h3>添加新学生</h3>
+    <div class="field">
+      <label>学生姓名</label>
+      <input type="text" id="aName" placeholder="例如：张三" />
+    </div>
+    <div class="field">
+      <label>初始课时</label>
+      <input type="number" id="aInitial" step="0.5" min="0" value="10" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="addCancel">取消</button>
+      <button class="btn primary" id="addSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============ 安全的本地存储（防崩溃） ============ */
+const safeStorage = {
+  get: function(k) { try { return localStorage.getItem(k); } catch(e) { return null; } },
+  set: function(k, v) { try { localStorage.setItem(k, v); } catch(e) {} },
+  remove: function(k) { try { localStorage.removeItem(k); } catch(e) {} }
+};
+
+/* ============ 核心配置 ============ */
+// 注意：版本号升到了 v3，确保你这次打开能覆盖掉之前的测试数据
+const STORAGE_KEY = 'xiaoke_multiuser_data_v3'; 
+const SESSION_KEY = 'xiaoke_current_user_v3';
+
+/* ============ 专属初始数据 ============ */
+const DEFAULT_DATA_BY_USER = {
+  'zlt': [
+    { name: '周景天', initial: 9 },
+    { name: '陆宣宇', initial: 15 },
+    { name: '任泰霖', initial: 12.5 },
+    { name: '朱泽烨', initial: 1 },
+    { name: '戚书豪', initial: 9 },
+    { name: '应明轩', initial: 8 }
+  ],
+  'fzd': [
+    { name: '瓜瓜', initial: 4 },
+    { name: '许诺', initial: 8 },
+    { name: '11楼成人', initial: 9 }
+  ]
+};
+
+let currentUser = '';
+let students = [];
+let records = [];
+
+/* ============ 工具函数 ============ */
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtNum = n => Number.isInteger(n) ? String(n) : n.toFixed(1).replace(/\.0$/, '');
+const nowText = () => {
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+
+const PALETTE = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#8b5cf6','#ef4444','#14b8a6','#f97316','#06b6d4','#84cc16','#a855f7','#0ea5e9'];
+const colorCache = new Map();
+function colorOf(name){
+  if(colorCache.has(name)) return colorCache.get(name);
+  let h = 0;
+  for(const ch of name) h = (h*131 + ch.codePointAt(0)) % 100003;
+  const c = PALETTE[h % PALETTE.length];
+  colorCache.set(name, c);
+  return c;
+}
+
+/* ============ 数据存取 ============ */
+function getAllData() {
+  try {
+    const raw = safeStorage.get(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch(e) { return {}; }
+}
+
+function saveAllData(data) {
+  try {
+    safeStorage.set(STORAGE_KEY, JSON.stringify(data));
+  } catch(e) {}
+}
+
+function loadUserData(user) {
+  const allData = getAllData();
+  
+  // 如果是新账号第一次登录，分配专属数据
+  if (!allData[user]) {
+    let initialStudents = [];
+    if (DEFAULT_DATA_BY_USER[user]) {
+      initialStudents = DEFAULT_DATA_BY_USER[user].map((s, index) => ({
+        id: index + 1,
+        name: s.name,
+        initial: s.initial
+      }));
+    }
+    
+    allData[user] = {
+      students: initialStudents,
+      records: []
+    };
+    saveAllData(allData);
+  }
+  
+  students = allData[user].students;
+  records = allData[user].records;
+}
+
+function saveCurrentData() {
+  const allData = getAllData();
+  allData[currentUser] = { students, records };
+  saveAllData(allData);
+}
+
+function nextStudentId() { return students.reduce((m,s) => Math.max(m, s.id), 0) + 1; }
+function nextRecordId() { return records.reduce((m,r) => Math.max(m, r.id), 0) + 1; }
+function usedOf(studentId) { return records.filter(r => r.studentId === studentId).reduce((s,r) => s + r.amount, 0); }
+function balanceOf(student) { return student.initial - usedOf(student.id); }
+
+/* ============ 页面逻辑 ============ */
+window.onload = function() {
+  const loginScreen = document.getElementById('loginScreen');
+  const appScreen = document.getElementById('appScreen');
+  const loginBtn = document.getElementById('loginBtn');
+  const loginUser = document.getElementById('loginUser');
+
+  // 登录事件绑定
+  loginBtn.onclick = function(e) {
+    if (e) e.preventDefault();
+    const user = loginUser.value.trim().toLowerCase();
+    
+    if (!user) { 
+      alert('请输入用户名'); 
+      return; 
+    }
+    
+    if (user !== 'zlt' && user !== 'fzd') {
+      alert('用户名不存在！请使用 zlt 或 fzd 登录。');
+      return;
+    }
+
+    // 记录登录状态
+    safeStorage.set(SESSION_KEY, user);
+
+    // 更新当前状态
+    currentUser = user;
+    loadUserData(user);
+    
+    // 切换界面
+    loginScreen.style.display = 'none';
+    appScreen.style.display = 'block';
+    document.getElementById('currentUserDisplay').textContent = user;
+    
+    // 渲染数据
+    render();
+  };
+
+  // 回车登录
+  loginUser.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      loginBtn.click();
+    }
+  });
+
+  // 退出登录
+  document.getElementById('logoutBtn').onclick = function() {
+    safeStorage.remove(SESSION_KEY);
+    location.reload();
+  };
+
+  // 检查是否已经登录过
+  const savedUser = safeStorage.get(SESSION_KEY);
+  if (savedUser && (savedUser === 'zlt' || savedUser === 'fzd')) {
+    currentUser = savedUser;
+    loadUserData(savedUser);
+    loginScreen.style.display = 'none';
+    appScreen.style.display = 'block';
+    document.getElementById('currentUserDisplay').textContent = savedUser;
+    render();
+  } else {
+    loginScreen.style.display = 'flex';
+  }
+  
+  // 绑定其他业务按钮
+  bindAppEvents();
+};
+
+/* ============ 渲染逻辑 ============ */
+function render(){
+  renderSummary();
+  renderStudents();
+  renderRecords();
+}
+
+function renderSummary(){
+  const totalInitial = students.reduce((s,st) => s + st.initial, 0);
+  const totalUsed = records.reduce((s,r) => s + r.amount, 0);
+  const totalBalance = totalInitial - totalUsed;
+
+  const today = new Date();
+  const todayKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  const todayUsed = records.filter(r => (r.time || '').startsWith(todayKey)).reduce((s,r) => s + r.amount, 0);
+
+  document.getElementById('summary').innerHTML = `
+    <div class="sum-card"><div class="sum-label">学生总数</div><div class="sum-val">${students.length}<small>人</small></div></div>
+    <div class="sum-card"><div class="sum-label">剩余总课时</div><div class="sum-val" style="color:var(--primary)">${fmtNum(totalBalance)}<small>课时</small></div></div>
+    <div class="sum-card"><div class="sum-label">累计已消</div><div class="sum-val" style="color:var(--red)">${fmtNum(totalUsed)}<small>课时</small></div></div>
+    <div class="sum-card"><div class="sum-label">今日消课</div><div class="sum-val" style="color:var(--amber)">${fmtNum(todayUsed)}<small>课时</small></div></div>
+  `;
+}
+
+function renderStudents(){
+  const el = document.getElementById('students');
+  if(!students.length){ el.innerHTML = '<div class="empty">暂无学生，请点击右上角添加</div>'; return; }
+  
+  el.innerHTML = students.map(st => {
+    const used = usedOf(st.id);
+    const balance = st.initial - used;
+    const c = colorOf(st.name);
+    const low = balance <= 0;
+    const warn = balance > 0 && balance <= 2;
+    const badgeClass = low ? 'low' : (warn ? 'low' : 'ok');
+    const badgeText = low ? '已用完' : (warn ? '课时不足' : '充足');
+
+    return `<div class="student" style="--c:${c}">
+      <div class="stu-top">
+        <span class="stu-name">${esc(st.name)}</span>
+        <span class="stu-badge ${badgeClass}">${badgeText}</span>
+      </div>
+      <div class="stu-balance">
+        <span class="balance-num" style="${low ? 'color:var(--red)' : ''}">${fmtNum(balance)}</span>
+        <span class="balance-unit">剩余课时</span>
+      </div>
+      <div class="stu-meta">
+        <span>初始 <b>${fmtNum(st.initial)}</b></span>
+        <span>已消 <b>${fmtNum(used)}</b></span>
+      </div>
+      <div class="stu-actions">
+        <button class="btn primary small" data-consume="${st.id}" ${low ? 'disabled style="opacity:.45"' : ''}>消课</button>
+        <button class="btn ghost small" data-add="${st.id}">加课时</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderRecords(){
+  const el = document.getElementById('records');
+  if(!records.length){ el.innerHTML = '<div class="empty">暂无消课记录</div>'; return; }
+  const sorted = [...records].sort((a,b) => b.id - a.id);
+  el.innerHTML = sorted.map(r => {
+    const color = colorOf(r.studentName || '');
+    return `<div class="record">
+      <span class="rec-dot" style="background:${color}"></span>
+      <div class="rec-main">
+        <div class="rec-title">${esc(r.studentName)} <small>消课</small></div>
+        ${r.note ? `<div class="rec-note">${esc(r.note)}</div>` : ''}
+      </div>
+      <span class="rec-time">${esc(r.time || '')}</span>
+      <span class="rec-amount">-${fmtNum(r.amount)}</span>
+      <button class="rec-undo" data-undo="${r.id}">撤销</button>
+    </div>`;
+  }).join('');
+}
+
+/* ============ 业务逻辑 ============ */
+function bindAppEvents() {
+  const consumeModal = document.getElementById('consumeModal');
+  const cAmount = document.getElementById('cAmount');
+  const cNote = document.getElementById('cNote');
+  let currentStudentId = null;
+
+  window.openConsume = function(studentId){
+    const st = students.find(s => s.id === studentId);
+    if(!st) return;
+    const balance = balanceOf(st);
+    if(balance <= 0){ alert('剩余课时不足'); return; }
+    currentStudentId = studentId;
+    document.getElementById('consumeSub').textContent = `${st.name} · 当前剩余 ${fmtNum(balance)} 课时`;
+    cAmount.value = Math.min(1, balance);
+    cNote.value = '';
+    consumeModal.classList.add('show');
+  };
+
+  document.getElementById('consumeCancel').onclick = function() { consumeModal.classList.remove('show'); };
+  document.querySelectorAll('#consumeModal .quick').forEach(function(btn) {
+    btn.onclick = function() { cAmount.value = btn.dataset.amt; };
+  });
+
+  document.getElementById('consumeSave').onclick = function() {
+    const st = students.find(s => s.id === currentStudentId);
+    if(!st) return;
+    const amount = Number(cAmount.value);
+    const note = cNote.value.trim();
+    if(!amount || amount <= 0){ alert('请输入正确的课时'); return; }
+    if(amount > balanceOf(st)){ alert(`不能超过剩余课时（${fmtNum(balanceOf(st))}）`); return; }
+
+    records.push({ id: nextRecordId(), studentId: st.id, studentName: st.name, amount: amount, note: note, time: nowText() });
+    saveCurrentData();
+    render();
+    consumeModal.classList.remove('show');
+  };
+
+  window.addHours = function(studentId){
+    const st = students.find(s => s.id === studentId);
+    if(!st) return;
+    const val = prompt(`为「${st.name}」增加课时数：`, '1');
+    if(val === null) return;
+    const amount = Number(val);
+    if(!amount || amount <= 0){ alert('请输入大于 0 的数字'); return; }
+    st.initial = Number((st.initial + amount).toFixed(2));
+    saveCurrentData();
+    render();
+  };
+
+  document.getElementById('students').addEventListener('click', function(e) {
+    const consumeBtn = e.target.closest('[data-consume]');
+    if(consumeBtn){ window.openConsume(Number(consumeBtn.dataset.consume)); return; }
+    const addBtn = e.target.closest('[data-add]');
+    if(addBtn){ window.addHours(Number(addBtn.dataset.add)); }
+  });
+
+  document.getElementById('records').addEventListener('click', function(e) {
+    const undoBtn = e.target.closest('[data-undo]');
+    if(!undoBtn) return;
+    const id = Number(undoBtn.dataset.undo);
+    if(confirm('确定撤销该次消课记录吗？')){
+      records = records.filter(r => r.id !== id);
+      saveCurrentData();
+      render();
+    }
+  });
+
+  const addModal = document.getElementById('addModal');
+  document.getElementById('addStudentBtn').onclick = function() { document.getElementById('aName').value=''; addModal.classList.add('show'); };
+  document.getElementById('addCancel').onclick = function() { addModal.classList.remove('show'); };
+  document.getElementById('addSave').onclick = function() {
+    const name = document.getElementById('aName').value.trim();
+    const initial = Number(document.getElementById('aInitial').value);
+    if(!name){ alert('请输入姓名'); return; }
+    students.push({ id: nextStudentId(), name: name, initial: initial });
+    saveCurrentData(); render(); addModal.classList.remove('show');
+  };
+
+  document.getElementById('resetBtn').onclick = function() {
+    if(confirm('确定清空当前账号的所有学生和记录吗？操作不可逆。')){
+      students = []; records = []; saveCurrentData(); render();
+    }
+  };
+}
+</script>
+</body>
+</html>
